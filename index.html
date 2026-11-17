@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RPG Life Tracker - Multijugador</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        display: ['Cinzel', 'serif']
+                    }
+                }
+            }
+        };
+    </script>
+    <style>
+        :root {
+            --bg: #07060f;
+            --panel: rgba(20, 18, 38, 0.65);
+            --panel-border: rgba(148, 130, 255, 0.14);
+            --gold: #fbbf24;
+        }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background-color: var(--bg);
+            background-image:
+                radial-gradient(900px 500px at 12% -8%, rgba(99, 102, 241, 0.22), transparent 60%),
+                radial-gradient(700px 500px at 100% 10%, rgba(168, 85, 247, 0.14), transparent 60%),
+                radial-gradient(800px 600px at 50% 120%, rgba(16, 185, 129, 0.10), transparent 60%);
+            background-attachment: fixed;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+            background-size: 44px 44px;
+            mask-image: radial-gradient(ellipse at top, black 20%, transparent 75%);
+            -webkit-mask-image: radial-gradient(ellipse at top, black 20%, transparent 75%);
+            pointer-events: none;
+            z-index: 0;
+        }
+        header, main { position: relative; z-index: 1; }
+        header { position: sticky; z-index: 50; }
+
+        .font-display { font-family: 'Cinzel', serif; }
+
+        .glass {
+            background: var(--panel);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid var(--panel-border);
+        }
+
+        input::placeholder {
+            color: #64748b;
+            font-size: 0.75rem;
+            font-weight: normal;
+        }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(129, 140, 248, 0.25); border-radius: 999px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(129, 140, 248, 0.45); }
+
+        .app-header {
+            background: rgba(10, 9, 22, 0.72);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            border-bottom: 1px solid rgba(148, 130, 255, 0.14);
+            box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.6);
+        }
+        .logo-tile {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6 60%, #a855f7);
+            box-shadow: 0 0 0 1px rgba(255,255,255,0.15) inset, 0 8px 24px -4px rgba(99, 102, 241, 0.6);
+        }
+        .brand-title {
+            background: linear-gradient(90deg, #e0e7ff, #c4b5fd 60%, #f0abfc);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .btn-ghost {
+            background: rgba(30, 27, 55, 0.7);
+            border: 1px solid rgba(148, 130, 255, 0.22);
+            transition: all .2s ease;
+        }
+        .btn-ghost:hover {
+            background: rgba(49, 46, 129, 0.55);
+            border-color: rgba(165, 180, 252, 0.5);
+            transform: translateY(-1px);
+            box-shadow: 0 8px 20px -8px rgba(99, 102, 241, 0.55);
+        }
+
+        .date-pill {
+            background: rgba(30, 27, 55, 0.7);
+            border: 1px solid rgba(148, 130, 255, 0.22);
+            transition: border-color .2s ease;
+        }
+        .date-pill:focus-within, .date-pill:hover { border-color: rgba(165, 180, 252, 0.55); }
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            filter: invert(0.75) sepia(1) saturate(3) hue-rotate(205deg);
+            cursor: pointer;
+        }
+
+        .hero-card {
+            background: linear-gradient(160deg, rgba(30, 27, 70, 0.75), rgba(14, 12, 30, 0.85));
+            border: 1px solid rgba(148, 130, 255, 0.2);
+            box-shadow: 0 30px 60px -30px rgba(79, 70, 229, 0.45), 0 1px 0 rgba(255,255,255,0.06) inset;
+        }
+
+        .avatar-ring {
+            padding: 3px;
+            border-radius: 1.35rem;
+            background: conic-gradient(from 160deg, #6366f1, #d946ef, #f59e0b, #6366f1);
+            box-shadow: 0 0 36px -2px rgba(139, 92, 246, 0.55);
+            transition: transform .3s ease, box-shadow .3s ease;
+        }
+        #avatar-container:hover .avatar-ring {
+            transform: scale(1.04) rotate(-1deg);
+            box-shadow: 0 0 48px 2px rgba(168, 85, 247, 0.7);
+        }
+        #avatar-preview { border: none !important; margin-bottom: 0 !important; }
+
+        #avatar-name {
+            font-family: 'Cinzel', serif;
+            letter-spacing: 0.04em;
+        }
+
+        .stat-card {
+            background: rgba(10, 9, 24, 0.55);
+            border: 1px solid rgba(148, 130, 255, 0.12);
+            border-radius: 1rem;
+            padding: 0.85rem 1rem;
+            transition: border-color .25s ease, transform .25s ease;
+        }
+        .stat-card:hover {
+            border-color: rgba(165, 180, 252, 0.35);
+            transform: translateX(2px);
+        }
+        .stat-icon {
+            width: 2rem; height: 2rem;
+            display: inline-flex; align-items: center; justify-content: center;
+            border-radius: 0.6rem;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.08);
+            font-size: 0.8rem;
+        }
+        .level-badge {
+            font-family: 'Cinzel', serif;
+            font-weight: 700;
+            font-size: 0.72rem;
+            padding: 0.18rem 0.6rem;
+            border-radius: 999px;
+            color: #1c1304;
+            background: linear-gradient(135deg, #fde68a, #f59e0b);
+            box-shadow: 0 2px 10px -2px rgba(245, 158, 11, 0.55);
+            letter-spacing: .04em;
+        }
+        .xp-track {
+            position: relative;
+            background: rgba(2, 6, 23, 0.75);
+            border: 1px solid rgba(148, 130, 255, 0.15);
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
+        }
+        .xp-fill {
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 0 14px rgba(255,255,255,0.25);
+        }
+
+        .section-title { font-family: 'Cinzel', serif; letter-spacing: .05em; }
+        .mission-group {
+            background: var(--panel);
+            border: 1px solid var(--panel-border);
+            border-radius: 1.25rem;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            box-shadow: 0 18px 40px -26px rgba(0,0,0,0.8);
+        }
+        .mission-row {
+            position: relative;
+            background: rgba(12, 11, 28, 0.6);
+            border: 1px solid rgba(148, 130, 255, 0.12);
+            transition: all .2s ease;
+        }
+        .mission-row:hover {
+            border-color: rgba(165, 180, 252, 0.4);
+            transform: translateX(3px);
+            background: rgba(30, 27, 70, 0.45);
+        }
+        .mission-row.done {
+            background: linear-gradient(90deg, rgba(16, 185, 129, 0.12), rgba(79, 70, 229, 0.08));
+            border-color: rgba(52, 211, 153, 0.35);
+        }
+        .xp-chip {
+            font-weight: 700;
+            color: var(--gold);
+            background: rgba(251, 191, 36, 0.1);
+            border: 1px solid rgba(251, 191, 36, 0.3);
+        }
+        .mission-row.done .xp-chip {
+            color: #6ee7b7;
+            background: rgba(16, 185, 129, 0.12);
+            border-color: rgba(52, 211, 153, 0.4);
+        }
+
+        .mission-checkbox {
+            -webkit-appearance: none;
+            appearance: none;
+            flex-shrink: 0;
+            width: 1.4rem !important;
+            height: 1.4rem !important;
+            border-radius: 0.5rem !important;
+            border: 2px solid rgba(165, 180, 252, 0.4);
+            background: rgba(2, 6, 23, 0.7);
+            display: inline-grid;
+            place-content: center;
+            transition: all .2s ease;
+        }
+        .mission-checkbox:hover { border-color: #a5b4fc; box-shadow: 0 0 12px rgba(129,140,248,.5); }
+        .mission-checkbox::after {
+            content: "";
+            width: 0.7rem; height: 0.7rem;
+            transform: scale(0);
+            transition: transform .18s cubic-bezier(.34,1.56,.64,1);
+            background: #fff;
+            clip-path: polygon(14% 44%, 0 59%, 40% 100%, 100% 21%, 85% 7%, 39% 68%);
+        }
+        .mission-checkbox:checked {
+            background: linear-gradient(135deg, #10b981, #6366f1);
+            border-color: transparent;
+            box-shadow: 0 0 16px rgba(52, 211, 153, 0.5);
+        }
+        .mission-checkbox:checked::after { transform: scale(1); }
+
+        #config-modal, #friend-modal { background: rgba(3, 2, 12, 0.78); }
+        .modal-card {
+            background: linear-gradient(170deg, rgba(25, 22, 55, 0.97), rgba(11, 10, 26, 0.98));
+            border: 1px solid rgba(148, 130, 255, 0.25);
+            box-shadow: 0 40px 80px -20px rgba(0,0,0,0.85), 0 0 60px -20px rgba(99,102,241,0.5);
+        }
+        .modal-box {
+            background: rgba(6, 5, 18, 0.6);
+            border: 1px solid rgba(148, 130, 255, 0.14);
+        }
+        .field {
+            background: rgba(15, 13, 34, 0.9);
+            border: 1px solid rgba(148, 130, 255, 0.22);
+            transition: border-color .2s ease, box-shadow .2s ease;
+        }
+        .field:focus {
+            outline: none;
+            border-color: #818cf8;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.22);
+        }
+        .list-item {
+            background: rgba(15, 13, 34, 0.75);
+            border: 1px solid rgba(148, 130, 255, 0.12);
+        }
+
+        button { transition: all .2s ease; }
+        button:active { transform: scale(.97); }
+    </style>
+</head>
+<body class="text-slate-100 min-h-screen font-sans pb-16">
+
+    <!-- HEADER / CONTROL DE FECHA & BOTÓN FLOTANTE AMIGOS -->
+    <header class="app-header top-0">
+        <div class="max-w-4xl mx-auto px-4 py-3.5 flex flex-wrap gap-3 justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="logo-tile p-2.5 rounded-xl text-white">
+                    <i class="fa-solid fa-gamepad text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="font-display brand-title font-bold text-lg tracking-wider leading-tight">RPG Life Tracker</h1>
+                    <p class="text-xs text-slate-400">Gamifica tu desarrollo personal</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3 flex-wrap">
+                <!-- BOTÓN FLOTANTE / DESPLEGABLE DE AMIGOS -->
+                <div class="relative">
+                    <button id="friends-dropdown-btn" class="btn-ghost text-amber-300 text-xs font-semibold px-3.5 py-2.5 rounded-xl flex items-center gap-2 shadow-lg">
+                        <i class="fa-solid fa-user-group text-amber-400"></i> Amigos <span id="friends-count-badge" class="bg-amber-500 text-slate-950 font-bold px-1.5 py-0.2 rounded-full text-[10px]">0</span>
+                    </button>
+                    <!-- Menú Desplegable -->
+                    <div id="friends-menu" class="hidden absolute right-0 mt-2 w-72 glass rounded-2xl shadow-2xl p-4 space-y-3 z-50 border border-indigo-400/20">
+                        <div class="flex justify-between items-center border-b border-indigo-400/10 pb-2">
+                            <span class="font-display font-bold text-xs text-amber-300 tracking-wider">Gremio de Amigos</span>
+                            <button id="share-profile-btn" class="text-[11px] bg-indigo-600 hover:bg-indigo-500 text-white px-2 py-1 rounded-lg font-medium flex items-center gap-1">
+                                <i class="fa-brands fa-whatsapp"></i> Compartir Perfil
+                            </button>
+                        </div>
+                        <div id="friends-list-container" class="space-y-2 max-h-60 overflow-y-auto pr-1">
+                            <p class="text-xs text-slate-400 text-center py-3">No tienes amigos añadidos aún.<br>¡Comparte tu enlace por WhatsApp!</p>
+                        </div>
+                    </div>
+                </div>
+
+                <button id="open-config-btn" class="btn-ghost text-indigo-300 text-xs font-semibold px-3.5 py-2.5 rounded-xl flex items-center gap-2">
+                    <i class="fa-solid fa-gear"></i> Gestionar
+                </button>
+
+                <div class="date-pill flex items-center gap-2 px-3.5 py-2 rounded-xl">
+                    <i class="fa-regular fa-calendar text-indigo-400 text-sm"></i>
+                    <input type="date" id="current-date" class="bg-transparent text-indigo-200 font-semibold text-sm focus:outline-none cursor-pointer">
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto px-4 py-8 space-y-9">
+
+        <!-- PANEL DE AVATAR Y ESTADÍSTICAS -->
+        <section class="hero-card rounded-3xl p-6 md:p-7 relative overflow-hidden">
+            <div class="absolute -right-16 -bottom-16 w-64 h-64 bg-indigo-500/15 rounded-full blur-3xl pointer-events-none"></div>
+            <div class="absolute -left-16 -top-16 w-56 h-56 bg-fuchsia-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+            <div class="relative grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 items-center">
+
+                <div class="flex flex-col items-center justify-center border-b md:border-b-0 md:border-r border-indigo-400/15 pb-6 md:pb-0 md:pr-8">
+                    <div class="relative group cursor-pointer mb-4" id="avatar-container" title="Haz clic para cambiar tu foto de perfil">
+                        <div class="avatar-ring">
+                            <div id="avatar-preview" class="w-28 h-28 rounded-[1.2rem] bg-gradient-to-tr from-indigo-600 to-violet-600 flex items-center justify-center text-white text-5xl overflow-hidden">
+                                <i class="fa-solid fa-user-shield" id="avatar-icon"></i>
+                                <img id="avatar-img" class="w-full h-full object-cover hidden" alt="Avatar">
+                            </div>
+                        </div>
+                        <div class="absolute inset-[3px] bg-black/55 rounded-[1.2rem] opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white text-xs font-medium gap-1.5 backdrop-blur-[2px]">
+                            <i class="fa-solid fa-camera"></i> Cambiar
+                        </div>
+                        <input type="file" id="avatar-input" accept="image/*" class="hidden">
+                    </div>
+
+                    <div class="w-full">
+                        <input type="text" id="avatar-name" placeholder="Escribe tu nombre" class="bg-transparent text-center font-bold text-xl text-slate-100 border-b border-transparent hover:border-indigo-400/30 focus:border-indigo-400 focus:outline-none transition w-full px-2 py-1">
+                    </div>
+                </div>
+
+                <div class="md:col-span-2 space-y-3" id="stats-container">
+                    <!-- Se inyectará dinámicamente mediante JS -->
+                </div>
+
+            </div>
+        </section>
+
+        <!-- SECCIÓN DE MISIONES DIARIAS -->
+        <section class="space-y-5">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h3 class="section-title text-xl font-bold flex items-center gap-2.5">
+                        <span class="stat-icon text-indigo-300"><i class="fa-solid fa-list-check"></i></span> Misiones Diarias
+                    </h3>
+                    <p class="text-xs text-slate-400 mt-1.5 ml-0.5" id="selected-date-label">Mostrando misiones para hoy</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 gap-5" id="missions-container">
+                <!-- Se inyectarán dinámicamente mediante JS -->
+            </div>
+        </section>
+
+    </main>
+
+    <!-- MODAL DE CONFIGURACIÓN -->
+    <div id="config-modal" class="fixed inset-0 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="modal-card rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 space-y-6">
+            <div class="flex justify-between items-center border-b border-indigo-400/15 pb-4">
+                <h3 class="font-display font-bold text-lg text-slate-100 flex items-center gap-2.5 tracking-wide">
+                    <span class="stat-icon text-indigo-300"><i class="fa-solid fa-sliders"></i></span> Panel de Creación y Edición
+                </h3>
+                <button id="close-config-btn" class="text-slate-400 hover:text-white hover:bg-white/10 w-9 h-9 rounded-xl text-lg flex items-center justify-center">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="modal-box p-4 rounded-2xl space-y-3">
+                <h4 id="category-form-title" class="text-xs font-bold uppercase tracking-wider text-indigo-400 flex items-center gap-1.5">
+                    <i class="fa-solid fa-folder-plus"></i> Nueva Categoría
+                </h4>
+                <input type="hidden" id="edit-category-key" value="">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <input type="text" id="new-cat-name" placeholder="Nombre de categoría" class="field text-sm rounded-xl px-3.5 py-2.5 text-slate-100 sm:col-span-2">
+                    <div class="flex gap-2">
+                        <button id="cancel-category-edit" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold px-3 py-2 rounded-xl hidden w-1/3">Cancelar</button>
+                        <button id="save-category-btn" class="bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-semibold text-xs px-4 py-2 rounded-xl shadow-lg shadow-indigo-900/40 w-full">Guardar</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-3">
+                <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400">Categorías Actuales</h4>
+                <div id="manage-categories-list" class="space-y-2 max-h-40 overflow-y-auto pr-1"></div>
+            </div>
+
+            <div class="modal-box p-4 rounded-2xl space-y-3">
+                <h4 id="mission-form-title" class="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+                    <i class="fa-solid fa-circle-plus"></i> Crear Nueva Misión
+                </h4>
+                <input type="hidden" id="edit-mission-id" value="">
+                <div class="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                    <input type="text" id="mission-title-input" placeholder="Título de la misión..." class="field text-sm rounded-xl px-3.5 py-2.5 text-slate-100 sm:col-span-6">
+                    <select id="mission-cat-select" class="field text-sm rounded-xl px-3 py-2.5 text-slate-100 sm:col-span-4"></select>
+                    <input type="number" id="mission-xp-input" placeholder="XP" value="15" min="5" max="100" class="field text-sm rounded-xl px-3 py-2.5 text-slate-100 sm:col-span-2">
+                </div>
+                <div class="flex justify-end gap-2 pt-1">
+                    <button id="cancel-mission-edit" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold px-3 py-2 rounded-xl hidden">Cancelar</button>
+                    <button id="save-mission-btn" class="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-semibold text-xs px-4 py-2 rounded-xl shadow-lg shadow-emerald-900/40">Guardar Misión</button>
+                </div>
+            </div>
+
+            <div class="space-y-3">
+                <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400">Misiones Actuales</h4>
+                <div id="manage-missions-list" class="space-y-2 max-h-48 overflow-y-auto pr-1"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL AL ACEPTAR UN AMIGO POR LINK -->
+    <div id="friend-modal" class="fixed inset-0 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="modal-card rounded-3xl w-full max-w-md p-6 space-y-4 text-center">
+            <div class="w-16 h-16 bg-amber-500/20 border border-amber-500/40 text-amber-400 text-2xl rounded-2xl mx-auto flex items-center justify-center shadow-lg">
+                <i class="fa-solid fa-user-plus"></i>
+            </div>
+            <h3 class="font-display font-bold text-lg text-slate-100">¡Nuevo Aventurero Encontrado!</h3>
+            <p id="friend-modal-text" class="text-xs text-slate-300 leading-relaxed">¿Deseas añadir a tu lista de amigos a <strong id="friend-modal-name" class="text-amber-300"></strong>?</p>
+            <div class="flex gap-3 pt-2">
+                <button id="reject-friend-btn" class="w-1/2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs py-2.5 rounded-xl">Ignorar</button>
+                <button id="accept-friend-btn" class="w-1/2 bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-bold text-xs py-2.5 rounded-xl shadow-lg">Añadir al Gremio</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- LÓGICA DE LA APLICACIÓN Y MULTIJUGADOR -->
+    <script>
+        const DEFAULT_CATEGORIES = {
+            fitness: { name: "Forma Física y Salud", icon: "fa-person-walking", color: "from-emerald-500 to-teal-600", textColor: "text-emerald-400" },
+            learning: { name: "Aprendizaje", icon: "fa-book-open", color: "from-purple-500 to-pink-600", textColor: "text-purple-400" }
+        };
+
+        const DEFAULT_MISSIONS = [
+            { id: "m1", category: "fitness", title: "Hacer ejercicio", xp: 15 },
+            { id: "m2", category: "learning", title: "Leer", xp: 20 }
+        ];
+
+        function getLocalDateString(date = new Date()) {
+            const offset = date.getTimezoneOffset();
+            const localDate = new Date(date.getTime() - (offset*60*1000));
+            return localDate.toISOString().split('T')[0];
+        }
+
+        let currentDate = getLocalDateString();
+        let appData = JSON.parse(localStorage.getItem('rpg_tracker_clean_data')) || {
+            name: "",
+            avatar: null,
+            categories: DEFAULT_CATEGORIES,
+            missions: DEFAULT_MISSIONS,
+            days: {},
+            friends: [] // Lista de amigos guardados
+        };
+
+        if (!appData.categories) appData.categories = DEFAULT_CATEGORIES;
+        if (!appData.missions) appData.missions = DEFAULT_MISSIONS;
+        if (!appData.days) appData.days = {};
+        if (!appData.friends) appData.friends = [];
+
+        function saveData() {
+            localStorage.setItem('rpg_tracker_clean_data', JSON.stringify(appData));
+        }
+
+        function ensureDateData(dateStr) {
+            if (!appData.days[dateStr]) {
+                appData.days[dateStr] = { completedMissions: [] };
+            }
+        }
+
+        function getCategoryStats(catKey) {
+            let totalXp = 0;
+            for (let date in appData.days) {
+                const dayMissions = appData.days[date].completedMissions || [];
+                dayMissions.forEach(mId => {
+                    const mission = appData.missions.find(m => m.id === mId);
+                    if (mission && mission.category === catKey) {
+                        totalXp += mission.xp;
+                    }
+                });
+            }
+
+            const xpPerLevel = 100;
+            let level = Math.floor(totalXp / xpPerLevel) + 1;
+            if (level > 100) level = 100;
+
+            const currentLevelXp = totalXp % xpPerLevel;
+            const progressPercent = level >= 100 ? 100 : (currentLevelXp / xpPerLevel) * 100;
+
+            return { totalXp, level, progressPercent, currentLevelXp };
+        }
+
+        // --- SISTEMA MULTIJUGADOR POR ENLACE URL ---
+        let pendingFriend = null;
+
+        function checkIncomingShare() {
+            const params = new URLSearchParams(window.location.search);
+            const friendName = params.get('f_name');
+            const friendDataStr = params.get('f_data');
+
+            if (friendName && friendDataStr) {
+                try {
+                    const decodedLevels = JSON.parse(decodeURIComponent(atob(friendDataStr)));
+                    pendingFriend = { name: decodeURIComponent(friendName), levels: decodedLevels };
+                    
+                    document.getElementById('friend-modal-name').innerText = pendingFriend.name;
+                    document.getElementById('friend-modal').classList.remove('hidden');
+                } catch (e) {
+                    console.error("Error al leer enlace de amigo", e);
+                }
+            }
+        }
+
+        document.getElementById('accept-friend-btn').addEventListener('click', () => {
+            if (pendingFriend) {
+                // Comprobar si ya existe para actualizarlo o agregarlo
+                const existingIndex = appData.friends.findIndex(f => f.name === pendingFriend.name);
+                if (existingIndex > -1) {
+                    appData.friends[existingIndex] = pendingFriend;
+                } else {
+                    appData.friends.push(pendingFriend);
+                }
+                saveData();
+                renderFriendsList();
+                // Limpiar URL sin recargar
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+            document.getElementById('friend-modal').classList.add('hidden');
+        });
+
+        document.getElementById('reject-friend-btn').addEventListener('click', () => {
+            document.getElementById('friend-modal').classList.add('hidden');
+            window.history.replaceState({}, document.title, window.location.pathname);
+        });
+
+        // Generar Enlace de WhatsApp
+        document.getElementById('share-profile-btn').addEventListener('click', () => {
+            const userName = appData.name.trim() || "Aventurero Anónimo";
+            
+            // Recopilar únicamente los niveles públicos de cada categoría actual
+            const publicLevels = {};
+            for (let key in appData.categories) {
+                publicLevels[appData.categories[key].name] = getCategoryStats(key).level;
+            }
+
+            const dataEncoded = btoa(encodeURIComponent(JSON.stringify(publicLevels)));
+            const currentUrl = window.location.origin + window.location.pathname;
+            const shareUrl = `${currentUrl}?f_name=${encodeURIComponent(userName)}&f_data=${dataEncoded}`;
+
+            const message = `¡Hola! Únete a mi gremio en RPG Life Tracker y mira mis estadísticas de nivel: ${shareUrl}`;
+            const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
+            
+            window.open(whatsappUrl, '_blank');
+        });
+
+        // Mostrar lista de amigos en el desplegable
+        function renderFriendsList() {
+            const container = document.getElementById('friends-list-container');
+            const badge = document.getElementById('friends-count-badge');
+            
+            badge.innerText = appData.friends.length;
+
+            if (appData.friends.length === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-400 text-center py-3">No tienes amigos añadidos aún.<br>¡Comparte tu perfil por WhatsApp!</p>`;
+                return;
+            }
+
+            container.innerHTML = '';
+            appData.friends.forEach((friend, idx) => {
+                let levelsHtml = '';
+                for (let catName in friend.levels) {
+                    levelsHtml += `<span class="bg-indigo-950/60 text-indigo-300 text-[10px] px-2 py-0.5 rounded border border-indigo-500/20">${catName}: <strong>Nv. ${friend.levels[catName]}</strong></span>`;
+                }
+
+                container.innerHTML += `
+                    <div class="list-item p-3 rounded-xl space-y-2">
+                        <div class="flex justify-between items-center">
+                            <span class="font-display font-bold text-xs text-amber-200"><i class="fa-solid fa-shield-halved text-amber-400 mr-1"></i> ${friend.name}</span>
+                            <button onclick="removeFriend(${idx})" class="text-red-400 hover:text-red-300 text-[10px]"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                        <div class="flex flex-wrap gap-1">
+                            ${levelsHtml}
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        window.removeFriend = function(index) {
+            appData.friends.splice(index, 1);
+            saveData();
+            renderFriendsList();
+        };
+
+        // Toggle Menú Desplegable de Amigos
+        const friendsBtn = document.getElementById('friends-dropdown-btn');
+        const friendsMenu = document.getElementById('friends-menu');
+
+        friendsBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            friendsMenu.classList.toggle('hidden');
+        });
+
+        document.addEventListener('click', () => {
+            friendsMenu.classList.add('hidden');
+        });
+
+        friendsMenu.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+
+        // --- RENDERIZADO PRINCIPAL ---
+        function render() {
+            ensureDateData(currentDate);
+
+            document.getElementById('current-date').value = currentDate;
+            document.getElementById('selected-date-label').innerText = `Mostrando misiones para el día: ${currentDate}`;
+
+            const nameInput = document.getElementById('avatar-name');
+            if (document.activeElement !== nameInput) {
+                nameInput.value = appData.name || "";
+            }
+
+            const avatarImg = document.getElementById('avatar-img');
+            const avatarIcon = document.getElementById('avatar-icon');
+            if (appData.avatar) {
+                avatarImg.src = appData.avatar;
+                avatarImg.classList.remove('hidden');
+                avatarIcon.classList.add('hidden');
+            } else {
+                avatarImg.classList.add('hidden');
+                avatarIcon.classList.remove('hidden');
+            }
+
+            const statsContainer = document.getElementById('stats-container');
+            statsContainer.innerHTML = '';
+
+            for (let key in appData.categories) {
+                const cat = appData.categories[key];
+                const stats = getCategoryStats(key);
+
+                statsContainer.innerHTML += `
+                    <div class="stat-card space-y-2.5">
+                        <div class="flex justify-between items-center text-xs font-medium">
+                            <span class="flex items-center gap-2.5 text-slate-100 text-[13px] font-semibold">
+                                <span class="stat-icon ${cat.textColor}"><i class="fa-solid ${cat.icon}"></i></span> ${cat.name}
+                            </span>
+                            <span class="flex items-center gap-2 text-slate-400">
+                                <span class="text-[10px] text-slate-500">${stats.currentLevelXp}/100 XP</span>
+                                <span class="level-badge">Nv. ${stats.level}</span>
+                            </span>
+                        </div>
+                        <div class="xp-track w-full h-3 rounded-full overflow-hidden p-0.5">
+                            <div class="xp-fill bg-gradient-to-r ${cat.color} h-full rounded-full transition-all duration-500" style="width: ${stats.progressPercent}%"></div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            const missionsContainer = document.getElementById('missions-container');
+            missionsContainer.innerHTML = '';
+
+            const completedToday = appData.days[currentDate].completedMissions || [];
+
+            for (let catKey in appData.categories) {
+                const cat = appData.categories[catKey];
+                const catMissions = appData.missions.filter(m => m.category === catKey);
+
+                if (catMissions.length === 0) continue;
+
+                let missionsHtml = catMissions.map(mission => {
+                    const isChecked = completedToday.includes(mission.id);
+                    return `
+                        <label class="mission-row ${isChecked ? 'done text-slate-300' : 'text-slate-200'} flex items-center justify-between p-3.5 rounded-xl cursor-pointer">
+                            <div class="flex items-center gap-3.5">
+                                <input type="checkbox" data-id="${mission.id}" ${isChecked ? 'checked' : ''} class="mission-checkbox cursor-pointer">
+                                <span class="text-sm font-medium ${isChecked ? 'line-through text-slate-400' : ''}">${mission.title}</span>
+                            </div>
+                            <span class="xp-chip text-xs px-2.5 py-1 rounded-lg">+${mission.xp} XP</span>
+                        </label>
+                    `;
+                }).join('');
+
+                missionsContainer.innerHTML += `
+                    <div class="mission-group p-4 md:p-5 space-y-3.5">
+                        <h4 class="text-xs font-bold uppercase tracking-[0.14em] ${cat.textColor} flex items-center gap-2.5">
+                            <span class="stat-icon"><i class="fa-solid ${cat.icon}"></i></span> ${cat.name}
+                        </h4>
+                        <div class="space-y-2">
+                            ${missionsHtml}
+                        </div>
+                    </div>
+                `;
+            }
+
+            document.querySelectorAll('.mission-checkbox').forEach(chk => {
+                chk.addEventListener('change', (e) => {
+                    const missionId = e.target.getAttribute('data-id');
+                    toggleMission(missionId);
+                });
+            });
+
+            updateConfigModalSelects();
+            renderManageCategoriesList();
+            renderManageMissionsList();
+            renderFriendsList();
+        }
+
+        function toggleMission(missionId) {
+            ensureDateData(currentDate);
+            let dayMissions = appData.days[currentDate].completedMissions;
+            const index = dayMissions.indexOf(missionId);
+
+            if (index > -1) {
+                dayMissions.splice(index, 1);
+            } else {
+                dayMissions.push(missionId);
+            }
+
+            saveData();
+            render();
+        }
+
+        function updateConfigModalSelects() {
+            const select = document.getElementById('mission-cat-select');
+            select.innerHTML = '';
+            for (let key in appData.categories) {
+                const cat = appData.categories[key];
+                select.innerHTML += `<option value="${key}">${cat.name}</option>`;
+            }
+        }
+
+        function renderManageCategoriesList() {
+            const container = document.getElementById('manage-categories-list');
+            container.innerHTML = '';
+
+            for (let key in appData.categories) {
+                const cat = appData.categories[key];
+                container.innerHTML += `
+                    <div class="list-item flex items-center justify-between p-2.5 rounded-xl text-sm">
+                        <span class="font-medium text-slate-200 text-xs flex items-center gap-2.5">
+                            <span class="stat-icon ${cat.textColor}" style="width:1.6rem;height:1.6rem;font-size:.7rem"><i class="fa-solid ${cat.icon}"></i></span> ${cat.name}
+                        </span>
+                        <div class="flex items-center gap-1.5">
+                            <button onclick="editCategory('${key}')" class="bg-slate-800/80 hover:bg-indigo-900/60 text-slate-300 px-2.5 py-1.5 rounded-lg text-xs"><i class="fa-solid fa-pen"></i></button>
+                            <button onclick="deleteCategory('${key}')" class="bg-red-950/40 hover:bg-red-900/60 text-red-400 px-2.5 py-1.5 rounded-lg text-xs border border-red-900/30"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        function renderManageMissionsList() {
+            const container = document.getElementById('manage-missions-list');
+            container.innerHTML = '';
+
+            appData.missions.forEach(m => {
+                const cat = appData.categories[m.category] || { name: 'Desconocida' };
+                container.innerHTML += `
+                    <div class="list-item flex items-center justify-between p-2.5 rounded-xl text-sm">
+                        <div class="space-y-0.5">
+                            <p class="font-medium text-slate-200 text-xs">${m.title}</p>
+                            <p class="text-[10px] text-indigo-400">${cat.name} • <span class="text-amber-400">+${m.xp} XP</span></p>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <button onclick="editMission('${m.id}')" class="bg-slate-800/80 hover:bg-indigo-900/60 text-slate-300 px-2.5 py-1.5 rounded-lg text-xs"><i class="fa-solid fa-pen"></i></button>
+                            <button onclick="deleteMission('${m.id}')" class="bg-red-950/40 hover:bg-red-900/60 text-red-400 px-2.5 py-1.5 rounded-lg text-xs border border-red-900/30"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        const modal = document.getElementById('config-modal');
+        document.getElementById('open-config-btn').addEventListener('click', () => modal.classList.remove('hidden'));
+        document.getElementById('close-config-btn').addEventListener('click', () => modal.classList.add('hidden'));
+
+        document.getElementById('save-category-btn').addEventListener('click', () => {
+            const keyInput = document.getElementById('edit-category-key').value;
+            const nameInput = document.getElementById('new-cat-name');
+            const name = nameInput.value.trim();
+            if (!name) return alert("Escribe un nombre para la categoría.");
+
+            if (keyInput) {
+                if (appData.categories[keyInput]) appData.categories[keyInput].name = name;
+            } else {
+                const key = 'cat_' + Date.now();
+                const gradients = [
+                    { color: "from-amber-500 to-orange-600", text: "text-amber-400" },
+                    { color: "from-rose-500 to-red-600", text: "text-rose-400" },
+                    { color: "from-cyan-500 to-blue-600", text: "text-cyan-400" },
+                    { color: "from-teal-500 to-emerald-600", text: "text-teal-400" }
+                ];
+                const randomGrad = gradients[Math.floor(Math.random() * gradients.length)];
+                appData.categories[key] = { name: name, icon: "fa-star", color: randomGrad.color, textColor: randomGrad.text };
+            }
+
+            resetCategoryForm();
+            saveData();
+            render();
+        });
+
+        window.editCategory = function(key) {
+            const cat = appData.categories[key];
+            if (!cat) return;
+            document.getElementById('edit-category-key').value = key;
+            document.getElementById('new-cat-name').value = cat.name;
+            document.getElementById('category-form-title').innerHTML = '<i class="fa-solid fa-pen-to-square"></i> Editar Categoría';
+            document.getElementById('cancel-category-edit').classList.remove('hidden');
+        };
+
+        window.deleteCategory = function(key) {
+            if (confirm("¿Estás seguro de eliminar esta categoría? Se eliminarán también todas las misiones asociadas a ella.")) {
+                delete appData.categories[key];
+                appData.missions = appData.missions.filter(m => m.category !== key);
+                saveData();
+                render();
+            }
+        };
+
+        document.getElementById('cancel-category-edit').addEventListener('click', resetCategoryForm);
+
+        function resetCategoryForm() {
+            document.getElementById('edit-category-key').value = '';
+            document.getElementById('new-cat-name').value = '';
+            document.getElementById('category-form-title').innerHTML = '<i class="fa-solid fa-folder-plus"></i> Nueva Categoría';
+            document.getElementById('cancel-category-edit').classList.add('hidden');
+        }
+
+        document.getElementById('save-mission-btn').addEventListener('click', () => {
+            const idInput = document.getElementById('edit-mission-id').value;
+            const titleInput = document.getElementById('mission-title-input').value.trim();
+            const catSelect = document.getElementById('mission-cat-select').value;
+            const xpInput = parseInt(document.getElementById('mission-xp-input').value) || 15;
+
+            if (!titleInput) return alert("Escribe un título para la misión.");
+
+            if (idInput) {
+                const mission = appData.missions.find(m => m.id === idInput);
+                if (mission) { mission.title = titleInput; mission.category = catSelect; mission.xp = xpInput; }
+            } else {
+                appData.missions.push({ id: 'm_' + Date.now(), category: catSelect, title: titleInput, xp: xpInput });
+            }
+
+            resetMissionForm();
+            saveData();
+            render();
+        });
+
+        window.editMission = function(id) {
+            const mission = appData.missions.find(m => m.id === id);
+            if (!mission) return;
+            document.getElementById('edit-mission-id').value = mission.id;
+            document.getElementById('mission-title-input').value = mission.title;
+            document.getElementById('mission-cat-select').value = mission.category;
+            document.getElementById('mission-xp-input').value = mission.xp;
+            document.getElementById('mission-form-title').innerHTML = '<i class="fa-solid fa-pen-to-square"></i> Editar Misión';
+            document.getElementById('cancel-mission-edit').classList.remove('hidden');
+        };
+
+        window.deleteMission = function(id) {
+            if (confirm("¿Estás seguro de eliminar esta misión?")) {
+                appData.missions = appData.missions.filter(m => m.id !== id);
+                saveData();
+                render();
+            }
+        };
+
+        document.getElementById('cancel-mission-edit').addEventListener('click', resetMissionForm);
+
+        function resetMissionForm() {
+            document.getElementById('edit-mission-id').value = '';
+            document.getElementById('mission-title-input').value = '';
+            document.getElementById('mission-xp-input').value = '15';
+            document.getElementById('mission-form-title').innerHTML = '<i class="fa-solid fa-circle-plus"></i> Crear Nueva Misión';
+            document.getElementById('cancel-mission-edit').classList.add('hidden');
+        }
+
+        document.getElementById('current-date').addEventListener('change', (e) => {
+            if (e.target.value) { currentDate = e.target.value; render(); }
+        });
+
+        document.getElementById('avatar-name').addEventListener('input', (e) => {
+            appData.name = e.target.value;
+            saveData();
+        });
+
+        const avatarContainer = document.getElementById('avatar-container');
+        const avatarInput = document.getElementById('avatar-input');
+
+        avatarContainer.addEventListener('click', () => avatarInput.click());
+
+        avatarInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(uploadEvent) {
+                    appData.avatar = uploadEvent.target.result;
+                    saveData();
+                    render();
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Inicializar render y comprobar si se abrió un enlace de amigo
+        render();
+        checkIncomingShare();
+    </script>
+</body>
+</html>
