@@ -1,0 +1,8 @@
+{
+  "name": "RPG Life Tracker",
+  "short_name": "RPG Tracker",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#07060f",
+  "theme_color": "#6366f1"
+}
