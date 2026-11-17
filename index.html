@@ -251,7 +251,7 @@
         }
         .mission-checkbox:checked::after { transform: scale(1); }
 
-        #config-modal, #friend-modal { background: rgba(3, 2, 12, 0.78); }
+        #config-modal, #friend-modal, #friends-list-modal { background: rgba(3, 2, 12, 0.78); }
         .modal-card {
             background: linear-gradient(170deg, rgba(25, 22, 55, 0.97), rgba(11, 10, 26, 0.98));
             border: 1px solid rgba(148, 130, 255, 0.25);
@@ -282,7 +282,7 @@
 </head>
 <body class="text-slate-100 min-h-screen font-sans pb-16">
 
-    <!-- HEADER / CONTROL DE FECHA & BOTÓN FLOTANTE AMIGOS -->
+    <!-- HEADER / CONTROL DE FECHA & BOTÓN AMIGOS -->
     <header class="app-header top-0">
         <div class="max-w-4xl mx-auto px-4 py-3.5 flex flex-wrap gap-3 justify-between items-center">
             <div class="flex items-center gap-3">
@@ -296,24 +296,10 @@
             </div>
 
             <div class="flex items-center gap-3 flex-wrap">
-                <!-- BOTÓN FLOTANTE / DESPLEGABLE DE AMIGOS -->
-                <div class="relative">
-                    <button id="friends-dropdown-btn" class="btn-ghost text-amber-300 text-xs font-semibold px-3.5 py-2.5 rounded-xl flex items-center gap-2 shadow-lg">
-                        <i class="fa-solid fa-user-group text-amber-400"></i> Amigos <span id="friends-count-badge" class="bg-amber-500 text-slate-950 font-bold px-1.5 py-0.2 rounded-full text-[10px]">0</span>
-                    </button>
-                    <!-- Menú Desplegable -->
-                    <div id="friends-menu" class="hidden absolute right-0 mt-2 w-72 glass rounded-2xl shadow-2xl p-4 space-y-3 z-50 border border-indigo-400/20">
-                        <div class="flex justify-between items-center border-b border-indigo-400/10 pb-2">
-                            <span class="font-display font-bold text-xs text-amber-300 tracking-wider">Gremio de Amigos</span>
-                            <button id="share-profile-btn" class="text-[11px] bg-indigo-600 hover:bg-indigo-500 text-white px-2 py-1 rounded-lg font-medium flex items-center gap-1">
-                                <i class="fa-brands fa-whatsapp"></i> Compartir Perfil
-                            </button>
-                        </div>
-                        <div id="friends-list-container" class="space-y-2 max-h-60 overflow-y-auto pr-1">
-                            <p class="text-xs text-slate-400 text-center py-3">No tienes amigos añadidos aún.<br>¡Comparte tu enlace por WhatsApp!</p>
-                        </div>
-                    </div>
-                </div>
+                <!-- BOTÓN DE AMIGOS -->
+                <button id="friends-dropdown-btn" class="btn-ghost text-amber-300 text-xs font-semibold px-3.5 py-2.5 rounded-xl flex items-center gap-2 shadow-lg">
+                    <i class="fa-solid fa-user-group text-amber-400"></i> Amigos <span id="friends-count-badge" class="bg-amber-500 text-slate-950 font-bold px-1.5 py-0.2 rounded-full text-[10px]">0</span>
+                </button>
 
                 <button id="open-config-btn" class="btn-ghost text-indigo-300 text-xs font-semibold px-3.5 py-2.5 rounded-xl flex items-center gap-2">
                     <i class="fa-solid fa-gear"></i> Gestionar
@@ -449,6 +435,33 @@
         </div>
     </div>
 
+    <!-- MODAL DE LISTA DE AMIGOS -->
+    <div id="friends-list-modal" class="fixed inset-0 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="modal-card rounded-3xl w-full max-w-md max-h-[85vh] overflow-y-auto p-6 space-y-5">
+            <div class="flex justify-between items-center border-b border-indigo-400/15 pb-4">
+                <h3 class="font-display font-bold text-lg text-amber-300 flex items-center gap-2.5 tracking-wide">
+                    <i class="fa-solid fa-users"></i> Gremio de Amigos
+                </h3>
+                <button id="close-friends-btn" class="text-slate-400 hover:text-white hover:bg-white/10 w-9 h-9 rounded-xl text-lg flex items-center justify-center">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            
+            <div class="flex justify-end">
+                <button id="share-profile-btn" class="text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-3.5 py-2.5 rounded-xl font-semibold flex items-center gap-2 shadow-lg">
+                    <i class="fa-brands fa-whatsapp text-sm"></i> Compartir Perfil
+                </button>
+            </div>
+            
+            <div class="space-y-3">
+                <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400">Tus Aliados</h4>
+                <div id="friends-list-container" class="space-y-2 max-h-60 overflow-y-auto pr-1">
+                    <!-- Se inyecta con JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- LÓGICA DE LA APLICACIÓN Y MULTIJUGADOR -->
     <script>
         const DEFAULT_CATEGORIES = {
@@ -577,7 +590,7 @@
             window.open(whatsappUrl, '_blank');
         });
 
-        // Mostrar lista de amigos en el desplegable
+        // Mostrar lista de amigos en el Modal
         function renderFriendsList() {
             const container = document.getElementById('friends-list-container');
             const badge = document.getElementById('friends-count-badge');
@@ -616,21 +629,13 @@
             renderFriendsList();
         };
 
-        // Toggle Menú Desplegable de Amigos
-        const friendsBtn = document.getElementById('friends-dropdown-btn');
-        const friendsMenu = document.getElementById('friends-menu');
-
-        friendsBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            friendsMenu.classList.toggle('hidden');
+        // Abrir y cerrar Modal de Amigos
+        const friendsListModal = document.getElementById('friends-list-modal');
+        document.getElementById('friends-dropdown-btn').addEventListener('click', () => {
+            friendsListModal.classList.remove('hidden');
         });
-
-        document.addEventListener('click', () => {
-            friendsMenu.classList.add('hidden');
-        });
-
-        friendsMenu.addEventListener('click', (e) => {
-            e.stopPropagation();
+        document.getElementById('close-friends-btn').addEventListener('click', () => {
+            friendsListModal.classList.add('hidden');
         });
 
         // --- RENDERIZADO PRINCIPAL ---
