@@ -459,6 +459,14 @@
                     <!-- Se inyecta con JS -->
                 </div>
             </div>
+
+            <div class="mt-4 border-t border-indigo-400/20 pt-4">
+                <p class="text-[10px] text-slate-400 mb-2">¿Problemas en iPhone? Pega el enlace del amigo aquí:</p>
+                <div class="flex gap-2">
+                    <input type="text" id="manual-link-input" placeholder="Pega el enlace de WhatsApp..." class="field text-xs rounded-lg px-2 py-1.5 w-full text-slate-200">
+                    <button id="add-manual-link-btn" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg text-xs font-semibold">Añadir</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -588,6 +596,36 @@
             const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
             
             window.open(whatsappUrl, '_blank');
+        });
+
+        // Añadir amigo mediante enlace manual (Solución iOS)
+        document.getElementById('add-manual-link-btn').addEventListener('click', () => {
+            const link = document.getElementById('manual-link-input').value.trim();
+            if(!link) return;
+            
+            try {
+                const url = new URL(link);
+                const params = new URLSearchParams(url.search);
+                const friendName = params.get('f_name');
+                const friendDataStr = params.get('f_data');
+                
+                if (friendName && friendDataStr) {
+                    const decodedLevels = JSON.parse(decodeURIComponent(atob(friendDataStr)));
+                    pendingFriend = { name: decodeURIComponent(friendName), levels: decodedLevels };
+                    
+                    document.getElementById('friend-modal-name').innerText = pendingFriend.name;
+                    
+                    // Ocultar modal de lista y mostrar modal de confirmación
+                    document.getElementById('friends-list-modal').classList.add('hidden');
+                    document.getElementById('friend-modal').classList.remove('hidden');
+                    
+                    document.getElementById('manual-link-input').value = ''; // Limpiar campo
+                } else {
+                    alert("El enlace no contiene datos de un jugador válido.");
+                }
+            } catch(e) {
+                alert("Error al leer el enlace. Asegúrate de pegarlo entero copiándolo desde WhatsApp.");
+            }
         });
 
         // Mostrar lista de amigos en el Modal
