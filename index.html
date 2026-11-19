@@ -423,11 +423,11 @@
     <!-- MODAL AL ACEPTAR UN AMIGO POR LINK -->
     <div id="friend-modal" class="fixed inset-0 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
         <div class="modal-card rounded-3xl w-full max-w-md p-6 space-y-4 text-center">
-            <div class="w-16 h-16 bg-amber-500/20 border border-amber-500/40 text-amber-400 text-2xl rounded-2xl mx-auto flex items-center justify-center shadow-lg">
+            <div id="friend-modal-avatar-wrap" class="w-16 h-16 bg-amber-500/20 border border-amber-500/40 text-amber-400 text-2xl rounded-2xl mx-auto flex items-center justify-center shadow-lg overflow-hidden">
                 <i class="fa-solid fa-user-plus"></i>
             </div>
             <h3 class="font-display font-bold text-lg text-slate-100">¡Nuevo Aventurero Encontrado!</h3>
-            <p id="friend-modal-text" class="text-xs text-slate-300 leading-relaxed">¿Deseas añadir a tu lista de amigos a <strong id="friend-modal-name" class="text-amber-300"></strong>?</p>
+            <p id="friend-modal-text" class="text-xs text-slate-300 leading-relaxed">¿Deseas añadir a tu lista de amigos en tiempo real a <strong id="friend-modal-name" class="text-amber-300"></strong>?</p>
             <div class="flex gap-3 pt-2">
                 <button id="reject-friend-btn" class="w-1/2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs py-2.5 rounded-xl">Ignorar</button>
                 <button id="accept-friend-btn" class="w-1/2 bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-bold text-xs py-2.5 rounded-xl shadow-lg">Añadir al Gremio</button>
@@ -447,31 +447,58 @@
                 </button>
             </div>
             
-            <div class="flex justify-end">
-                <button id="share-profile-btn" class="text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-3.5 py-2.5 rounded-xl font-semibold flex items-center gap-2 shadow-lg">
-                    <i class="fa-brands fa-whatsapp text-sm"></i> Compartir Perfil
-                </button>
+            <div class="modal-box p-3 rounded-2xl flex items-center justify-between gap-2">
+                <div class="min-w-0">
+                    <p class="text-[10px] uppercase tracking-wider text-slate-400 font-bold">Tu Código de Aventurero</p>
+                    <p id="my-user-id-display" class="text-xs font-mono text-indigo-300 truncate"></p>
+                </div>
+                <div class="flex items-center gap-1.5 shrink-0">
+                    <button id="copy-id-btn" title="Copiar código" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-2.5 py-2 rounded-xl text-xs font-semibold">
+                        <i class="fa-regular fa-copy"></i>
+                    </button>
+                    <button id="share-profile-btn" class="text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-2 rounded-xl font-semibold flex items-center gap-1.5 shadow-lg">
+                        <i class="fa-brands fa-whatsapp text-sm"></i> Compartir
+                    </button>
+                </div>
             </div>
             
             <div class="space-y-3">
-                <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400">Tus Aliados</h4>
-                <div id="friends-list-container" class="space-y-2 max-h-60 overflow-y-auto pr-1">
+                <div class="flex justify-between items-center">
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400">Tus Aliados (En vivo)</h4>
+                    <span class="text-[10px] text-emerald-400 flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Tiempo real</span>
+                </div>
+                <div id="friends-list-container" class="space-y-2.5 max-h-64 overflow-y-auto pr-1">
                     <!-- Se inyecta con JS -->
                 </div>
             </div>
 
             <div class="mt-4 border-t border-indigo-400/20 pt-4">
-                <p class="text-[10px] text-slate-400 mb-2">¿Problemas en iPhone? Pega el enlace del amigo aquí:</p>
+                <p class="text-[10px] text-slate-400 mb-2">Añadir por enlace o código (ideal para iPhone):</p>
                 <div class="flex gap-2">
-                    <input type="text" id="manual-link-input" placeholder="Pega el enlace de WhatsApp..." class="field text-xs rounded-lg px-2 py-1.5 w-full text-slate-200">
-                    <button id="add-manual-link-btn" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg text-xs font-semibold">Añadir</button>
+                    <input type="text" id="manual-link-input" placeholder="Pega el enlace o código del amigo..." class="field text-xs rounded-lg px-2.5 py-2 w-full text-slate-200">
+                    <button id="add-manual-link-btn" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3.5 py-2 rounded-lg text-xs font-semibold shrink-0">Añadir</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- LÓGICA DE LA APLICACIÓN Y MULTIJUGADOR -->
-    <script>
+    <!-- LÓGICA DE LA APLICACIÓN Y MULTIJUGADOR EN TIEMPO REAL (FIREBASE) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyClY2qZflj9mOrrL55XFohG-peo8eR-Qx8",
+            authDomain: "rpg-life-tracker-b7b3a.firebaseapp.com",
+            projectId: "rpg-life-tracker-b7b3a",
+            storageBucket: "rpg-life-tracker-b7b3a.firebasestorage.app",
+            messagingSenderId: "389851036483",
+            appId: "1:389851036483:web:cd4cb348e9f80deb8dcdf6"
+        };
+
+        const firebaseApp = initializeApp(firebaseConfig);
+        const db = getFirestore(firebaseApp);
+
         const DEFAULT_CATEGORIES = {
             fitness: { name: "Forma Física y Salud", icon: "fa-person-walking", color: "from-emerald-500 to-teal-600", textColor: "text-emerald-400" },
             learning: { name: "Aprendizaje", icon: "fa-book-open", color: "from-purple-500 to-pink-600", textColor: "text-purple-400" }
@@ -484,27 +511,70 @@
 
         function getLocalDateString(date = new Date()) {
             const offset = date.getTimezoneOffset();
-            const localDate = new Date(date.getTime() - (offset*60*1000));
+            const localDate = new Date(date.getTime() - (offset * 60 * 1000));
             return localDate.toISOString().split('T')[0];
+        }
+
+        function generateUserId() {
+            return 'u_' + Math.random().toString(36).substring(2, 10);
         }
 
         let currentDate = getLocalDateString();
         let appData = JSON.parse(localStorage.getItem('rpg_tracker_clean_data')) || {
+            userId: generateUserId(),
             name: "",
             avatar: null,
             categories: DEFAULT_CATEGORIES,
             missions: DEFAULT_MISSIONS,
             days: {},
-            friends: [] // Lista de amigos guardados
+            friendIds: []
         };
 
+        if (!appData.userId) appData.userId = generateUserId();
         if (!appData.categories) appData.categories = DEFAULT_CATEGORIES;
         if (!appData.missions) appData.missions = DEFAULT_MISSIONS;
         if (!appData.days) appData.days = {};
-        if (!appData.friends) appData.friends = [];
+        if (!appData.friendIds) appData.friendIds = [];
 
-        function saveData() {
+        document.getElementById('my-user-id-display').innerText = appData.userId;
+
+        let syncTimeout = null;
+
+        async function syncProfileToCloud() {
+            try {
+                const publicCategories = [];
+                for (let key in appData.categories) {
+                    const cat = appData.categories[key];
+                    const stats = getCategoryStats(key);
+                    publicCategories.push({
+                        name: cat.name,
+                        icon: cat.icon || "fa-star",
+                        textColor: cat.textColor || "text-indigo-400",
+                        level: stats.level,
+                        currentLevelXp: stats.currentLevelXp
+                    });
+                }
+
+                await setDoc(doc(db, "players", appData.userId), {
+                    name: appData.name.trim() || "Aventurero Anónimo",
+                    avatar: appData.avatar || null,
+                    categories: publicCategories,
+                    updatedAt: Date.now()
+                });
+            } catch (err) {
+                console.error("Error al sincronizar perfil con la nube:", err);
+            }
+        }
+
+        function saveData(immediateSync = true) {
             localStorage.setItem('rpg_tracker_clean_data', JSON.stringify(appData));
+            if (immediateSync) {
+                clearTimeout(syncTimeout);
+                syncProfileToCloud();
+            } else {
+                clearTimeout(syncTimeout);
+                syncTimeout = setTimeout(syncProfileToCloud, 800);
+            }
         }
 
         function ensureDateData(dateStr) {
@@ -535,136 +605,201 @@
             return { totalXp, level, progressPercent, currentLevelXp };
         }
 
-        // --- SISTEMA MULTIJUGADOR POR ENLACE URL ---
-        let pendingFriend = null;
+        // --- SISTEMA MULTIJUGADOR EN TIEMPO REAL ---
+        let pendingFriendId = null;
+        const liveFriendsData = {};
+        const friendUnsubscribers = {};
+
+        function subscribeToFriends() {
+            // Desuscribir amigos eliminados
+            for (let fId in friendUnsubscribers) {
+                if (!appData.friendIds.includes(fId)) {
+                    friendUnsubscribers[fId]();
+                    delete friendUnsubscribers[fId];
+                    delete liveFriendsData[fId];
+                }
+            }
+
+            // Suscribir amigos nuevos en tiempo real
+            appData.friendIds.forEach(fId => {
+                if (!friendUnsubscribers[fId]) {
+                    friendUnsubscribers[fId] = onSnapshot(doc(db, "players", fId), (docSnap) => {
+                        if (docSnap.exists()) {
+                            liveFriendsData[fId] = docSnap.data();
+                        } else {
+                            liveFriendsData[fId] = { name: "Jugador no encontrado", avatar: null, categories: [] };
+                        }
+                        renderFriendsList();
+                    }, (error) => {
+                        console.error("Error escuchando amigo:", fId, error);
+                    });
+                }
+            });
+
+            renderFriendsList();
+        }
+
+        async function openFriendConfirmModal(friendId) {
+            if (friendId === appData.userId) {
+                alert("¡Ese es tu propio código de aventurero!");
+                return;
+            }
+            try {
+                const snap = await getDoc(doc(db, "players", friendId));
+                if (!snap.exists()) {
+                    alert("No se encontró ningún aventurero con ese enlace o código. Asegúrate de que haya abierto la app al menos una vez.");
+                    return;
+                }
+                const data = snap.data();
+                pendingFriendId = friendId;
+
+                document.getElementById('friend-modal-name').innerText = data.name || "Aventurero Anónimo";
+                const avatarWrap = document.getElementById('friend-modal-avatar-wrap');
+                if (data.avatar) {
+                    avatarWrap.innerHTML = `<img src="${data.avatar}" class="w-full h-full object-cover" alt="Avatar">`;
+                } else {
+                    avatarWrap.innerHTML = `<i class="fa-solid fa-user-plus"></i>`;
+                }
+
+                document.getElementById('friends-list-modal').classList.add('hidden');
+                document.getElementById('friend-modal').classList.remove('hidden');
+            } catch (e) {
+                console.error("Error buscando amigo:", e);
+                alert("Error de conexión al buscar el perfil del amigo.");
+            }
+        }
 
         function checkIncomingShare() {
             const params = new URLSearchParams(window.location.search);
-            const friendName = params.get('f_name');
-            const friendDataStr = params.get('f_data');
-
-            if (friendName && friendDataStr) {
-                try {
-                    const decodedLevels = JSON.parse(decodeURIComponent(atob(friendDataStr)));
-                    pendingFriend = { name: decodeURIComponent(friendName), levels: decodedLevels };
-                    
-                    document.getElementById('friend-modal-name').innerText = pendingFriend.name;
-                    document.getElementById('friend-modal').classList.remove('hidden');
-                } catch (e) {
-                    console.error("Error al leer enlace de amigo", e);
-                }
+            const friendId = params.get('friend');
+            if (friendId) {
+                openFriendConfirmModal(friendId.trim());
             }
         }
 
         document.getElementById('accept-friend-btn').addEventListener('click', () => {
-            if (pendingFriend) {
-                // Comprobar si ya existe para actualizarlo o agregarlo
-                const existingIndex = appData.friends.findIndex(f => f.name === pendingFriend.name);
-                if (existingIndex > -1) {
-                    appData.friends[existingIndex] = pendingFriend;
-                } else {
-                    appData.friends.push(pendingFriend);
+            if (pendingFriendId) {
+                if (!appData.friendIds.includes(pendingFriendId)) {
+                    appData.friendIds.push(pendingFriendId);
+                    saveData(false);
                 }
-                saveData();
-                renderFriendsList();
-                // Limpiar URL sin recargar
+                subscribeToFriends();
                 window.history.replaceState({}, document.title, window.location.pathname);
             }
+            pendingFriendId = null;
             document.getElementById('friend-modal').classList.add('hidden');
         });
 
         document.getElementById('reject-friend-btn').addEventListener('click', () => {
+            pendingFriendId = null;
             document.getElementById('friend-modal').classList.add('hidden');
             window.history.replaceState({}, document.title, window.location.pathname);
         });
 
-        // Generar Enlace de WhatsApp
-        document.getElementById('share-profile-btn').addEventListener('click', () => {
-            const userName = appData.name.trim() || "Aventurero Anónimo";
-            
-            // Recopilar únicamente los niveles públicos de cada categoría actual
-            const publicLevels = {};
-            for (let key in appData.categories) {
-                publicLevels[appData.categories[key].name] = getCategoryStats(key).level;
+        // Copiar código de aventurero
+        document.getElementById('copy-id-btn').addEventListener('click', async () => {
+            try {
+                await navigator.clipboard.writeText(appData.userId);
+                const btn = document.getElementById('copy-id-btn');
+                btn.innerHTML = '<i class="fa-solid fa-check text-emerald-400"></i>';
+                setTimeout(() => btn.innerHTML = '<i class="fa-regular fa-copy"></i>', 1500);
+            } catch (e) {
+                prompt("Copia tu código de aventurero:", appData.userId);
             }
+        });
 
-            const dataEncoded = btoa(encodeURIComponent(JSON.stringify(publicLevels)));
+        // Generar Enlace corto de WhatsApp
+        document.getElementById('share-profile-btn').addEventListener('click', async () => {
+            await syncProfileToCloud();
             const currentUrl = window.location.origin + window.location.pathname;
-            const shareUrl = `${currentUrl}?f_name=${encodeURIComponent(userName)}&f_data=${dataEncoded}`;
+            const shareUrl = `${currentUrl}?friend=${encodeURIComponent(appData.userId)}`;
 
-            const message = `¡Hola! Únete a mi gremio en RPG Life Tracker y mira mis estadísticas de nivel: ${shareUrl}`;
+            const message = `¡Únete a mi gremio en RPG Life Tracker y sigue mi progreso en tiempo real!\nEnlace: ${shareUrl}\nCódigo (para iPhone): ${appData.userId}`;
             const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
-            
             window.open(whatsappUrl, '_blank');
         });
 
-        // Añadir amigo mediante enlace manual (Solución iOS)
+        // Añadir amigo mediante enlace o código manual
         document.getElementById('add-manual-link-btn').addEventListener('click', () => {
-            const link = document.getElementById('manual-link-input').value.trim();
-            if(!link) return;
-            
-            try {
-                const url = new URL(link);
-                const params = new URLSearchParams(url.search);
-                const friendName = params.get('f_name');
-                const friendDataStr = params.get('f_data');
-                
-                if (friendName && friendDataStr) {
-                    const decodedLevels = JSON.parse(decodeURIComponent(atob(friendDataStr)));
-                    pendingFriend = { name: decodeURIComponent(friendName), levels: decodedLevels };
-                    
-                    document.getElementById('friend-modal-name').innerText = pendingFriend.name;
-                    
-                    // Ocultar modal de lista y mostrar modal de confirmación
-                    document.getElementById('friends-list-modal').classList.add('hidden');
-                    document.getElementById('friend-modal').classList.remove('hidden');
-                    
-                    document.getElementById('manual-link-input').value = ''; // Limpiar campo
-                } else {
-                    alert("El enlace no contiene datos de un jugador válido.");
+            const inputVal = document.getElementById('manual-link-input').value.trim();
+            if (!inputVal) return;
+
+            let extractedId = inputVal;
+            if (inputVal.includes('http') || inputVal.includes('friend=')) {
+                try {
+                    const urlMatch = inputVal.match(/https?:\/\/[^\s]+/);
+                    const url = new URL(urlMatch ? urlMatch[0] : inputVal);
+                    const fParam = new URLSearchParams(url.search).get('friend');
+                    if (fParam) extractedId = fParam;
+                } catch (e) {
+                    // Si falla el parseo de URL, se intenta usar el texto tal cual
                 }
-            } catch(e) {
-                alert("Error al leer el enlace. Asegúrate de pegarlo entero copiándolo desde WhatsApp.");
             }
+
+            document.getElementById('manual-link-input').value = '';
+            openFriendConfirmModal(extractedId.trim());
         });
 
-        // Mostrar lista de amigos en el Modal
+        // Renderizar lista de amigos en tiempo real
         function renderFriendsList() {
             const container = document.getElementById('friends-list-container');
             const badge = document.getElementById('friends-count-badge');
-            
-            badge.innerText = appData.friends.length;
 
-            if (appData.friends.length === 0) {
-                container.innerHTML = `<p class="text-xs text-slate-400 text-center py-3">No tienes amigos añadidos aún.<br>¡Comparte tu perfil por WhatsApp!</p>`;
+            badge.innerText = appData.friendIds.length;
+
+            if (appData.friendIds.length === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-400 text-center py-4">No tienes amigos añadidos aún.<br>¡Comparte tu enlace o código por WhatsApp!</p>`;
                 return;
             }
 
             container.innerHTML = '';
-            appData.friends.forEach((friend, idx) => {
+            appData.friendIds.forEach((fId) => {
+                const friend = liveFriendsData[fId];
+                if (!friend) {
+                    container.innerHTML += `
+                        <div class="list-item p-3 rounded-xl text-xs text-slate-400 flex items-center justify-between">
+                            <span><i class="fa-solid fa-spinner fa-spin mr-2 text-indigo-400"></i>Cargando perfil...</span>
+                            <button onclick="removeFriend('${fId}')" class="text-red-400 hover:text-red-300 text-[10px]"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                    `;
+                    return;
+                }
+
+                const avatarHtml = friend.avatar
+                    ? `<img src="${friend.avatar}" class="w-11 h-11 rounded-xl object-cover border border-indigo-400/30 shrink-0" alt="${friend.name}">`
+                    : `<div class="w-11 h-11 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-600 flex items-center justify-center text-white text-base shrink-0 border border-indigo-400/30"><i class="fa-solid fa-user-shield"></i></div>`;
+
                 let levelsHtml = '';
-                for (let catName in friend.levels) {
-                    levelsHtml += `<span class="bg-indigo-950/60 text-indigo-300 text-[10px] px-2 py-0.5 rounded border border-indigo-500/20">${catName}: <strong>Nv. ${friend.levels[catName]}</strong></span>`;
+                const cats = friend.categories || [];
+                if (cats.length === 0) {
+                    levelsHtml = `<span class="text-[10px] text-slate-500">Sin categorías aún</span>`;
+                } else {
+                    cats.forEach(c => {
+                        levelsHtml += `<span class="bg-indigo-950/70 text-indigo-200 text-[10px] px-2 py-0.5 rounded-md border border-indigo-500/20 flex items-center gap-1"><i class="fa-solid ${c.icon || 'fa-star'} ${c.textColor || 'text-indigo-400'} text-[9px]"></i> ${c.name}: <strong class="text-amber-300">Nv. ${c.level}</strong></span>`;
+                    });
                 }
 
                 container.innerHTML += `
-                    <div class="list-item p-3 rounded-xl space-y-2">
-                        <div class="flex justify-between items-center">
-                            <span class="font-display font-bold text-xs text-amber-200"><i class="fa-solid fa-shield-halved text-amber-400 mr-1"></i> ${friend.name}</span>
-                            <button onclick="removeFriend(${idx})" class="text-red-400 hover:text-red-300 text-[10px]"><i class="fa-solid fa-trash"></i></button>
-                        </div>
-                        <div class="flex flex-wrap gap-1">
-                            ${levelsHtml}
+                    <div class="list-item p-3 rounded-2xl flex items-start gap-3">
+                        ${avatarHtml}
+                        <div class="flex-1 min-w-0 space-y-2">
+                            <div class="flex justify-between items-center gap-2">
+                                <span class="font-display font-bold text-xs text-amber-200 truncate">${friend.name}</span>
+                                <button onclick="removeFriend('${fId}')" class="text-red-400 hover:text-red-300 text-[11px] px-1.5 py-0.5 rounded hover:bg-red-950/40" title="Eliminar amigo"><i class="fa-solid fa-trash"></i></button>
+                            </div>
+                            <div class="flex flex-wrap gap-1.5">
+                                ${levelsHtml}
+                            </div>
                         </div>
                     </div>
                 `;
             });
         }
 
-        window.removeFriend = function(index) {
-            appData.friends.splice(index, 1);
-            saveData();
-            renderFriendsList();
+        window.removeFriend = function(fId) {
+            appData.friendIds = appData.friendIds.filter(id => id !== fId);
+            saveData(false);
+            subscribeToFriends();
         };
 
         // Abrir y cerrar Modal de Amigos
@@ -784,7 +919,7 @@
                 dayMissions.push(missionId);
             }
 
-            saveData();
+            saveData(true);
             render();
         }
 
@@ -863,7 +998,7 @@
             }
 
             resetCategoryForm();
-            saveData();
+            saveData(true);
             render();
         });
 
@@ -880,7 +1015,7 @@
             if (confirm("¿Estás seguro de eliminar esta categoría? Se eliminarán también todas las misiones asociadas a ella.")) {
                 delete appData.categories[key];
                 appData.missions = appData.missions.filter(m => m.category !== key);
-                saveData();
+                saveData(true);
                 render();
             }
         };
@@ -910,7 +1045,7 @@
             }
 
             resetMissionForm();
-            saveData();
+            saveData(true);
             render();
         });
 
@@ -928,7 +1063,7 @@
         window.deleteMission = function(id) {
             if (confirm("¿Estás seguro de eliminar esta misión?")) {
                 appData.missions = appData.missions.filter(m => m.id !== id);
-                saveData();
+                saveData(true);
                 render();
             }
         };
@@ -949,9 +1084,10 @@
 
         document.getElementById('avatar-name').addEventListener('input', (e) => {
             appData.name = e.target.value;
-            saveData();
+            saveData(false); // Espera 800ms tras dejar de escribir para subir a la nube
         });
 
+        // Compresión automática de foto de perfil (máx. 150x150 px) para guardar en Firestore
         const avatarContainer = document.getElementById('avatar-container');
         const avatarInput = document.getElementById('avatar-input');
 
@@ -959,19 +1095,41 @@
 
         avatarInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(uploadEvent) {
-                    appData.avatar = uploadEvent.target.result;
-                    saveData();
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(uploadEvent) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const maxSize = 150;
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > height) {
+                        if (width > maxSize) { height *= maxSize / width; width = maxSize; }
+                    } else {
+                        if (height > maxSize) { width *= maxSize / height; height = maxSize; }
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    appData.avatar = canvas.toDataURL('image/jpeg', 0.75);
+                    saveData(true);
                     render();
                 };
-                reader.readAsDataURL(file);
-            }
+                img.src = uploadEvent.target.result;
+            };
+            reader.readAsDataURL(file);
         });
 
-        // Inicializar render y comprobar si se abrió un enlace de amigo
+        // Inicializar app, sincronizar perfil propio y suscribirse a amigos en tiempo real
         render();
+        syncProfileToCloud();
+        subscribeToFriends();
         checkIncomingShare();
     </script>
 </body>
